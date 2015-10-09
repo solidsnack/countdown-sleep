@@ -1,0 +1,7 @@
+[package]
+name = "countdown"
+version = "0.0.0"
+authors = ["Jason Dusek <jason.dusek@gmail.com>"]
+
+[dependencies]
+chrono = "*"
