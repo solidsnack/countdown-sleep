@@ -1,6 +1,8 @@
 extern crate chrono;
 extern crate libc;
 
+use chrono::Timelike;
+
 fn main() {
     // TODO: argument parsing
     let countdown = Countdown::default();
@@ -32,8 +34,8 @@ struct Countdown {
 }
 
 enum Mark {
-    Minute(UTCTime),
-    Second(UTCTime),
+    Minute(u32),
+    Second(u32),
     Liftoff(String)
 }
 
@@ -41,7 +43,7 @@ enum Mark {
 impl Default for Countdown {
     fn default() -> Countdown {
         let t = chrono::offset::utc::UTC::now()
-              + chrono::duration::Duration::seconds(3);
+              + chrono::duration::Duration::minutes(2);
         Countdown { liftoff: "Go!".to_string(), deadline: t, countdown: 3 }
     }
 }
@@ -52,10 +54,27 @@ impl Iterator for Countdown {
     fn next(&mut self) -> Option<Mark> {
         type SecondsAndNanos = libc::types::os::common::posix01::timespec;
 
-        let req = SecondsAndNanos{tv_sec: 0, tv_nsec: 0};
+        let req = SecondsAndNanos{tv_sec: 1, tv_nsec: 0};
         let mut rem = SecondsAndNanos{tv_sec: 0, tv_nsec: 0};
 
-        unsafe { libc::funcs::posix88::unistd::nanosleep(&req, &mut rem); }
-        Some(Mark::Liftoff(self.liftoff.clone()))
+        loop {
+            let t = chrono::offset::utc::UTC::now();
+            unsafe { libc::funcs::posix88::unistd::nanosleep(&req, &mut rem); }
+
+            if t.timestamp() == self.deadline.timestamp() {
+                return Some(Mark::Liftoff(self.liftoff.clone()));
+            } else if t > self.deadline {
+                return None
+            } else if t.time().second() == self.deadline.time().second() &&
+                      t.time().minute() < self.deadline.time().minute() {
+                let m = self.deadline.time().minute() - t.time().minute();
+                return Some(Mark::Minute(m));
+            } else if self.deadline.minute() == t.time().minute() &&
+                      self.deadline.time().second() > t.time().second() &&
+                      self.deadline.time().second() - t.time().second() <= self.countdown as u32 {
+                let s = self.deadline.time().second() - t.time().second();
+                return Some(Mark::Second(s));
+            }
+        }
     }
 }
