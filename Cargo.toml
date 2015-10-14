@@ -5,3 +5,4 @@ authors = ["Jason Dusek <jason.dusek@gmail.com>"]
 
 [dependencies]
 chrono = "*"
+libc = "*"

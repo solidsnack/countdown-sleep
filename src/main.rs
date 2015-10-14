@@ -1,4 +1,5 @@
 extern crate chrono;
+extern crate libc;
 
 fn main() {
     // TODO: argument parsing
@@ -6,15 +7,14 @@ fn main() {
     println!("Countdown Initiated!");
     for mark in countdown {
         match mark {
-            Minute(t) => {
-                println!("T minus {} minutes and counting...",
-                         /* round time difference to minutes */);
+            Mark::Minute(t) => {
+                println!("T minus {} minutes and counting...", t);
             },
-            Second(t) => {
-                println!("{}...", /* round time difference to seconds */);
+            Mark::Second(t) => {
+                println!("{}...", t);
             },
-            Liftoff(s) => {
-                println!(s);
+            Mark::Liftoff(s) => {
+                println!("{}", s);
             }
         }
     }
@@ -47,8 +47,15 @@ impl Default for Countdown {
 }
 
 impl Iterator for Countdown {
+    type Item = Mark;
+
     fn next(&mut self) -> Option<Mark> {
-        // thread.sleep()
-        // yield next thing
+        type SecondsAndNanos = libc::types::os::common::posix01::timespec;
+
+        let req = SecondsAndNanos{tv_sec: 0, tv_nsec: 0};
+        let mut rem = SecondsAndNanos{tv_sec: 0, tv_nsec: 0};
+
+        unsafe { libc::funcs::posix88::unistd::nanosleep(&req, &mut rem); }
+        Some(Mark::Liftoff(self.liftoff.clone()))
     }
 }
